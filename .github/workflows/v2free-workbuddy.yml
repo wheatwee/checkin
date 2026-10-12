@@ -48,7 +48,8 @@ jobs:
           for ((i=0;i<${#user_list[@]};i++)); do
             python3 v2free/main.py --username "${user_list[$i]}" --password "${pwd_list[$i]}" >> result_v2free.txt || true
           done
-          cat result_v2free.txt
+          # 回显时把账号名（时间戳前的 token）替换为 ***，避免账号名进公开日志
+          sed -E 's/[^ ]+ ([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2})/*** \1/' result_v2free.txt
 
       - name: WorkBuddy 签到
         env:
