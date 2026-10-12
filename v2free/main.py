@@ -44,9 +44,9 @@ def main(usr, pw):
     try:
         login_result = resp.json()
     except ValueError:
-        return usr + " " + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()) + " 登录失败：返回内容不是 JSON"
+        return usr + " " + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()) + " ❌ 登录失败：返回内容不是 JSON"
     if login_result.get("ret") != 1:
-        return usr + " " + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()) + " 登录失败：" + str(login_result.get("msg", resp.text))
+        return usr + " " + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()) + " ❌ 登录失败：" + str(login_result.get("msg", resp.text))
 
     # 3. 签到（接口未变：POST /user/checkin）
     resp = client.post(
@@ -59,12 +59,14 @@ def main(usr, pw):
     try:
         checkin_result = resp.json()
     except ValueError:
-        return usr + " " + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()) + " 签到失败：返回内容不是 JSON"
+        return usr + " " + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()) + " ❌ 签到失败：返回内容不是 JSON"
 
     if checkin_result.get("ret") == 1:
-        msg = str(checkin_result.get("msg", "签到成功"))
+        msg = "✅ " + str(checkin_result.get("msg", "签到成功"))
+    elif "签" in str(checkin_result.get("msg", "")) and "已" in str(checkin_result.get("msg", "")):
+        msg = "🟢 " + str(checkin_result.get("msg", "今日已签到"))
     else:
-        msg = "签到失败：" + str(checkin_result.get("msg", resp.text))
+        msg = "❌ 签到失败：" + str(checkin_result.get("msg", resp.text))
 
     # 4. 从用户中心页面获取当前流量信息（签到已过/失败时也能拿到）
     info = fetch_user_info(client)
