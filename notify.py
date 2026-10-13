@@ -12,7 +12,7 @@ RESULT_FILES = [
     ("WorkBuddy", "result_workbuddy.txt"),
 ]
 
-ICON = {"ok": "✅", "already": "🟢", "fail": "❌"}
+ICON = {"ok": "✅", "already": "🟢", "fail": "❌", "expired": "⚠️"}
 
 
 def read_result(path):
@@ -52,15 +52,19 @@ def classify_workbuddy(text):
     m = re.search(r"成功\s*(\d+)\s*/\s*已签\s*(\d+)\s*/\s*失效\s*(\d+)\s*/\s*失败\s*(\d+)", text or "")
     if m:
         ok, already, expired, failed = map(int, m.groups())
-        if failed or expired:
+        if failed:
             return "fail"
+        if expired:
+            return "expired"
         if ok:
             return "ok"
         if already:
             return "already"
         return "fail"
-    if text is None or "❌" in text or "⚠️" in text:
+    if text is None or "❌" in text:
         return "fail"
+    if "⚠️" in text:
+        return "expired"
     if "🟢" in text:
         return "already"
     if "✅" in text:
@@ -72,15 +76,17 @@ CLASSIFIERS = {"V2Free": classify_v2free, "WorkBuddy": classify_workbuddy}
 
 
 def build_subject(status):
-    """取最差状态：任一失败即整体「部分失败」/「签到失败」；ok 与 already 都算正常"""
+    """取最差状态：fail > expired > ok/already；ok 与 already 都算正常"""
     detail = " / ".join("%s %s" % (lb, ICON[status[lb]]) for lb, _ in RESULT_FILES)
     vals = [status[lb] for lb, _ in RESULT_FILES]
     if all(v == "fail" for v in vals):
         head = "❌ 签到失败"
+    elif "fail" in vals:
+        head = "⚠️ 部分失败"
+    elif "expired" in vals:
+        head = "⚠️ Token 失效（需续期）"
     elif all(v in ("ok", "already") for v in vals):
         head = "✅ 签到成功" if "ok" in vals else "🟢 今日已签"
-    else:
-        head = "⚠️ 部分失败"
     return "%s｜%s" % (head, detail)
 
 
