@@ -8,7 +8,8 @@ on:
         type: boolean
         default: false
   schedule:
-    - cron: '0 0,14 * * *'    # 北京时间 08:00 / 22:00
+    - cron: '3 8,22 * * *'    # 北京时间 08:00 / 22:00
+      timezone: Asia/Shanghai
 
 permissions:
   contents: write
@@ -77,7 +78,7 @@ jobs:
     - name: Send mail
       if: ${{ always() }}
       run: |
-        if [ "${{ inputs.force_email }}" = "true" ] || [ "$(TZ=Asia/Shanghai date +%H)" -lt 9 ]; then
+        if [ "${{ inputs.force_email }}" = "true" ] || [ "$(TZ=Asia/Shanghai date +%H)" -lt 12 ]; then
         python3 notify.py --remail '${{ secrets.remail }}' --semail '${{ secrets.semail }}' --secode '${{ secrets.secode }}'
         else
         echo "非早场，跳过邮件"
