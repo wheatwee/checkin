@@ -7,9 +7,9 @@ on:
         description: '强制发送邮件（测试用）'
         type: boolean
         default: false
-  schedule:
-    - cron: '3 8,22 * * *'    # 北京时间 08:00 / 22:00
-      timezone: Asia/Shanghai
+#  schedule:
+#    - cron: '3 8,22 * * *'    # 北京时间 08:00 / 22:00
+#      timezone: Asia/Shanghai
 
 permissions:
   contents: write
