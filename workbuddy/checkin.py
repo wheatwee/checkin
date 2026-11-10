@@ -203,20 +203,54 @@ def _fmt_already(status, via="今日已签过"):
 
 # ---------------------------------------------------------------- 账号与输出
 
+def parse_accounts(raw):
+    """容错解析账号配置，支持三种写法：
+    1) {"accounts":[...]}（README 标准格式）
+    2) JSON 数组 [...] 或单个 {"name":..,"token":..} 对象
+    3) 非 JSON 的裸 JWT token（误把 WB_ACCESS_TOKEN 式 token 填进 Secret）
+    并兼容 Windows 记事本产生的 UTF-8 BOM。
+    """
+    raw = raw.strip().lstrip("\ufeff").strip()
+    if raw.startswith(("{", "[")):
+        try:
+            data = json.loads(raw)
+        except Exception as e:  # noqa: BLE001
+            print("[E] WORKBUDDY_ACCOUNTS 不是合法 JSON: %s" % e, file=sys.stderr)
+            return []
+        if isinstance(data, list):
+            return data
+        if isinstance(data, dict):
+            if isinstance(data.get("accounts"), list):
+                return data["accounts"]
+            if data.get("token"):
+                return [data]
+        print("[E] WORKBUDDY_ACCOUNTS 里没找到账号列表", file=sys.stderr)
+        return []
+    # 非 JSON：按裸 token 处理（JWT 形如 xxx.yyy.zzz）
+    if raw.count(".") >= 2 and len(raw) > 40:
+        print("[I] WORKBUDDY_ACCOUNTS 不是 JSON，按单个裸 token 处理")
+        return [{"name": "账号1", "token": raw}]
+    print("[E] WORKBUDDY_ACCOUNTS 内容无法识别（既不是 JSON 也不是 JWT token）",
+          file=sys.stderr)
+    return []
+
+
 def load_accounts():
     """优先读环境变量 WORKBUDDY_ACCOUNTS，否则退回本地 JSON 文件。"""
     raw = os.environ.get("WORKBUDDY_ACCOUNTS", "").strip()
     if raw:
-        try:
-            return json.loads(raw).get("accounts", [])
-        except Exception as e:  # noqa: BLE001
-            print("[E] WORKBUDDY_ACCOUNTS 不是合法 JSON: %s" % e, file=sys.stderr)
+        accounts = parse_accounts(raw)
+        if accounts:
+            return accounts
 
     for path in ("accounts.json", "签到token.json"):
         if os.path.exists(path):
             try:
-                with open(path, "r", encoding="utf-8") as f:
-                    return json.load(f).get("accounts", [])
+                # utf-8-sig：自动吃掉 BOM
+                with open(path, "r", encoding="utf-8-sig") as f:
+                    accounts = parse_accounts(f.read())
+                if accounts:
+                    return accounts
             except Exception as e:  # noqa: BLE001
                 print("[E] 读取 %s 失败: %s" % (path, e), file=sys.stderr)
     return []
